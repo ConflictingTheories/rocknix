@@ -1,0 +1,69 @@
+name: Build Base Image (No Emulators)
+
+on:
+  workflow_dispatch:  # Manual trigger from Actions tab
+    inputs:
+      device:
+        description: 'Device to build'
+        required: true
+        default: 'RK3566'
+        type: choice
+        options:
+          - RK3566
+          - RK3588
+          - RK3326
+          - S922X
+
+jobs:
+  build-base:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Maximize build space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+          df -h
+      
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build Docker image
+        run: make docker-image-build
+      
+      - name: Build BASE image (no emulators)
+        run: |
+          BASE_ONLY=true EMULATION_DEVICE=no make docker-${{ github.event.inputs.device }}
+      
+      - name: Get image filename
+        id: get-filename
+        run: |
+          IMAGE=$(ls release/*.img.gz | head -n 1)
+          echo "filename=$(basename $IMAGE)" >> $GITHUB_OUTPUT
+          echo "filepath=$IMAGE" >> $GITHUB_OUTPUT
+      
+      - name: Upload Base Image
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROCKNIX-BASE-${{ github.event.inputs.device }}
+          path: release/*.img.gz
+          retention-days: 7
+          compression-level: 0  # Already compressed
+      
+      - name: Build Summary
+        run: |
+          echo "## Build Complete! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Device:** ${{ github.event.inputs.device }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Type:** Base image (no emulators)" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** ${{ steps.get-filename.outputs.filename }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Download from the Artifacts section above ⬆️" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          ls -lh release/
