@@ -38,24 +38,6 @@ jobs:
         with:
           install: true
 
-      - name:  Restore Buildx local cache
-        id: restore-buildx-cache
-        uses: actions/cache@v4
-        with:
-          path:  . /. buildx-cache
-          key:  buildx-cache-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('**/Dockerfile','**/Makefile','**/mk/**') }}
-          restore-keys: |
-            buildx-cache-${{ runner.os }}-${{ github. ref }}-
-
-      - name:  Restore ccache
-        id: restore-ccache
-        uses: actions/cache@v4
-        with:
-          path: ~/. ccache
-          key: ccache-${{ runner.os }}-${{ hashFiles('**/*.c','**/*.cpp','**/Makefile') }}
-          restore-keys: |
-            ccache-${{ runner.os }}-
-
       - name:  Prepare env
         run: |
           echo "DEVICE=${{ github.event.inputs.device || 'RK3566' }}" >> $GITHUB_ENV
@@ -69,14 +51,8 @@ jobs:
           docker buildx version || true
 
       - name: Run make (BASE_ONLY=true make docker-<DEVICE>)
-        env:
-          CCACHE_DIR: $HOME/.ccache
-          CC: ccache
-          CXX: ccache
         run: |
           set -euxo pipefail
-          mkdir -p "$CCACHE_DIR"
-          export PATH="/usr/lib/ccache:$PATH" || true
           time BASE_ONLY=true make docker-${DEVICE}
 
       - name:  Save produced Docker image to tar
@@ -105,20 +81,6 @@ jobs:
             . /*.tar
             ROCKNIX-*
             docker-image-${{ env.DEVICE }}.tar
-
-      - name: Persist Buildx local cache
-        if: always()
-        uses: actions/cache@v4
-        with: 
-          path: ./.buildx-cache
-          key: buildx-cache-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('**/Dockerfile','**/Makefile','**/mk/**') }}
-
-      - name: Persist ccache
-        if: always()
-        uses: actions/cache@v4
-        with:
-          path:  ~/.ccache
-          key: ccache-${{ runner.os }}-${{ hashFiles('**/*. c','**/*.cpp','**/Makefile') }}
 
       - name:  Optionally push image to GHCR
         if: ${{ github.event.inputs.push_image == true }}
