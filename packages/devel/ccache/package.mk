@@ -33,9 +33,9 @@ configure_host() {
 post_makeinstall_host() {
   # setup ccache
   if [ -z "${CCACHE_DISABLE}" ]; then
-    CCACHE_DIR="${BUILD_CCACHE_DIR}" ${TOOLCHAIN}/bin/ccache --max-size=${CCACHE_CACHE_SIZE}
-    CCACHE_DIR="${BUILD_CCACHE_DIR}" ${TOOLCHAIN}/bin/ccache --set-config compression_level=${CCACHE_COMPRESSLEVEL}
-    CCACHE_DIR="${BUILD_CCACHE_DIR}" ${TOOLCHAIN}/bin/ccache --set-config sloppiness=${CCACHE_SLOPPINESS}
+    CCACHE_DIR="${BUILD_CCACHE_DIR}" ${TOOLCHAIN}/bin/ccache --max-size=${CCACHE_CACHE_SIZE} || true
+    CCACHE_DIR="${BUILD_CCACHE_DIR}" ${TOOLCHAIN}/bin/ccache --set-config compression_level=${CCACHE_COMPRESSLEVEL} || true
+    CCACHE_DIR="${BUILD_CCACHE_DIR}" ${TOOLCHAIN}/bin/ccache --set-config sloppiness=${CCACHE_SLOPPINESS} || true
   fi
 
   cat >${TOOLCHAIN}/bin/host-gcc <<EOF
