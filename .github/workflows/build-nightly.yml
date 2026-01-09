@@ -12,7 +12,7 @@ on:
         description: 'If true, tag and push the built image to GHCR (requires secret GHCR_PAT)'
         required: false
         default: false
-        type: boolean
+        type:  boolean
 
 permissions:
   contents: read
@@ -25,12 +25,12 @@ jobs:
     runs-on: ubuntu-24.04
     environment: auto
     steps:
-      - name: Checkout repository
+      - name:  Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth:  0
 
-      - name:  Set up QEMU (for cross / multi-arch if needed)
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
@@ -41,9 +41,9 @@ jobs:
       - name:  Restore Buildx local cache
         id: restore-buildx-cache
         uses: actions/cache@v4
-        with: 
-          path: ./.buildx-cache
-          key: buildx-cache-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('**/Dockerfile','**/Makefile','**/mk/**') }}
+        with:
+          path:  . /. buildx-cache
+          key:  buildx-cache-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('**/Dockerfile','**/Makefile','**/mk/**') }}
           restore-keys: |
             buildx-cache-${{ runner.os }}-${{ github. ref }}-
 
@@ -56,14 +56,14 @@ jobs:
           restore-keys: |
             ccache-${{ runner.os }}-
 
-      - name: Prepare env
+      - name:  Prepare env
         run: |
           echo "DEVICE=${{ github.event.inputs.device || 'RK3566' }}" >> $GITHUB_ENV
           echo "BASE_ONLY=true" >> $GITHUB_ENV
 
       - name: Show environment
         run: |
-          echo "Building device: $DEVICE"
+          echo "Building device:  $DEVICE"
           uname -a
           docker --version
           docker buildx version || true
@@ -76,14 +76,14 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p "$CCACHE_DIR"
-          export PATH="/usr/lib/ccache: $PATH" || true
+          export PATH="/usr/lib/ccache:$PATH" || true
           time BASE_ONLY=true make docker-${DEVICE}
 
       - name:  Save produced Docker image to tar
         id: save-image
         run: |
           set -euxo pipefail
-          IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}} {{. CreatedAt}}' | grep -i -E 'rk3566|rocknix|docker-rk3566' | head -n1 | awk '{print $1}' || true)
+          IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}} {{.CreatedAt}}' | grep -i -E 'rk3566|rocknix|docker-rk3566' | head -n1 | awk '{print $1}' || true)
           if [ -z "$IMAGE" ]; then
             IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}} {{. CreatedAt}}' | grep -v '<none>' | head -n1 | awk '{print $1}' || true)
           fi
@@ -98,18 +98,18 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: rocknix-${{ env.DEVICE }}-artifacts-${{ github.run_id }}
+          name:  rocknix-${{ env.DEVICE }}-artifacts-${{ github.run_id }}
           path: |
             . /*.img
-            ./*.img. gz
-            ./*.tar
+            . /*.img.gz
+            . /*.tar
             ROCKNIX-*
-            docker-image-${{ env. DEVICE }}.tar
+            docker-image-${{ env.DEVICE }}.tar
 
       - name: Persist Buildx local cache
         if: always()
         uses: actions/cache@v4
-        with:
+        with: 
           path: ./.buildx-cache
           key: buildx-cache-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('**/Dockerfile','**/Makefile','**/mk/**') }}
 
@@ -117,10 +117,10 @@ jobs:
         if: always()
         uses: actions/cache@v4
         with:
-          path: ~/.ccache
-          key: ccache-${{ runner.os }}-${{ hashFiles('**/*.c','**/*.cpp','**/Makefile') }}
+          path:  ~/.ccache
+          key: ccache-${{ runner.os }}-${{ hashFiles('**/*. c','**/*.cpp','**/Makefile') }}
 
-      - name: Optionally push image to GHCR
+      - name:  Optionally push image to GHCR
         if: ${{ github.event.inputs.push_image == true }}
         env:
           GHCR_PAT: ${{ secrets. GHCR_PAT }}
@@ -130,17 +130,18 @@ jobs:
             echo "GHCR_PAT is not set in secrets; cannot push" >&2
             exit 1
           fi
-          IMAGE="${{ steps. save-image.outputs.IMAGE_TO_SAVE }}"
-          TARGET=ghcr.io/${{ github.repository_owner }}/rocknix-${{ env. DEVICE }}:${{ github. run_number }}-${{ github.sha::8 }}
+          IMAGE="${{ steps.save-image.outputs.IMAGE_TO_SAVE }}"
+          SHA_SHORT=$(echo ${{ github.sha }} | cut -c1-8)
+          TARGET=ghcr.io/${{ github.repository_owner }}/rocknix-${{ env.DEVICE }}: ${{ github.run_number }}-${SHA_SHORT}
           docker tag "$IMAGE" "$TARGET"
           echo "$GHCR_PAT" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           docker push "$TARGET"
           echo "pushed=$TARGET" >> $GITHUB_OUTPUT
 
       - name: Summary
-        if:  always()
+        if: always()
         run: |
-          echo "Build finished. Artifacts (including docker-image-${{ env.DEVICE }}.tar) uploaded."
-          if [ "${{ github.event. inputs.push_image }}" = "true" ]; then
+          echo "Build finished.  Artifacts (including docker-image-${{ env.DEVICE }}.tar) uploaded."
+          if [ "${{ github.event.inputs.push_image }}" = "true" ]; then
             echo "If push was requested, image target: ${{ steps.save-image.outputs.IMAGE_TO_SAVE }}"
           fi
